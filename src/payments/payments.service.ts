@@ -48,8 +48,11 @@ export class PaymentsService {
         const sig = req.headers['stripe-signature'];
 
         let event: Stripe.Event;
-        const endpointSecret = "whsec_57bb896baaa8e5b45bf107749e9f1d31b31f44c90566abf9d8af4788fef93e54"
-        
+        //Testing webhook secret
+        //const endpointSecret = "whsec_57bb896baaa8e5b45bf107749e9f1d31b31f44c90566abf9d8af4788fef93e54"
+        //Production webhook secret
+        const endpointSecret = "whsec_zimQYFU4kVNZWoSWOMGCkfUZasJH308x"
+
         try{
             event = this.stripe.webhooks.constructEvent(
                 req['rawBody'],
@@ -60,7 +63,18 @@ export class PaymentsService {
             return;
         }
 
-        console.log({event});
+        console.log({event})
+        switch(event.type){
+            case 'charge.succeeded':
+            //TODO: llamar a nuestro microservicio de ordenes para actualizar el estado de la orden
+            console.log(event);
+            break;
+
+        default:
+            console.log(`Unhandled event type ${event.type}`);
+        }
+
+        
         return res.status(200).json({sig});
     }
 
