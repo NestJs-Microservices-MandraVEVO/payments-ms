@@ -12,7 +12,7 @@ export class PaymentsService {
 
     async createPaymentSession(paymentSessionDto : PaymentSessionDto){
 
-        const {currency, items} = paymentSessionDto;
+        const {currency, items, orderId} = paymentSessionDto;
         const lineItems = items.map( item => {
             return {
                   price_data:{
@@ -30,13 +30,15 @@ export class PaymentsService {
         const session = await this.stripe.checkout.sessions.create({
             //aqui el ID de mi orden
             payment_intent_data: {
-                metadata: {}
+                metadata: {
+                    orderId: orderId
+                }
             },
 
             line_items: lineItems,
             mode: 'payment',
-            success_url: 'http://localhost:3006/payments/success',
-            cancel_url: 'http://localhost:3006/payments/cancel',
+            success_url: envs.stripeSuccessUrl,
+            cancel_url: envs.stripeCancelUrl,
         });
 
 
@@ -49,9 +51,9 @@ export class PaymentsService {
 
         let event: Stripe.Event;
         //Testing webhook secret
-        //const endpointSecret = "whsec_57bb896baaa8e5b45bf107749e9f1d31b31f44c90566abf9d8af4788fef93e54"
+        //const endpointSecret = envs.stripeSecret
         //Production webhook secret
-        const endpointSecret = "whsec_zimQYFU4kVNZWoSWOMGCkfUZasJH308x"
+        const endpointSecret = envs.stripeEndpointSecret;
 
         try{
             event = this.stripe.webhooks.constructEvent(
@@ -66,8 +68,12 @@ export class PaymentsService {
         console.log({event})
         switch(event.type){
             case 'charge.succeeded':
+                const chargeSucceded = event.data.object;
             //TODO: llamar a nuestro microservicio de ordenes para actualizar el estado de la orden
-            console.log(event);
+            console.log({
+                metadata: chargeSucceded.metadata,
+                orderId: chargeSucceded.metadata.orderId,
+            });
             break;
 
         default:
