@@ -7,7 +7,9 @@ async function bootstrap() {
 
   const logger = new Logger('Payments-ms')
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true //manda el body como un buffer para validar el webhook de stripe
+  });
 
 
   app.useGlobalPipes(
