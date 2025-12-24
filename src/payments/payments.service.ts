@@ -1,5 +1,5 @@
 import { strip } from './../../node_modules/@colors/colors/index.d';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { envs, NATS_SERVICE } from 'src/config';
 import Stripe from 'stripe';
 import { PaymentSessionDto } from './dto/payment-session.dto';
@@ -8,7 +8,7 @@ import { url } from 'inspector';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
-export class PaymentsService {
+export class PaymentsService implements OnModuleInit {
 
     private readonly stripe = new Stripe(envs.stripeSecret);
     private readonly logger = new Logger('PaymentsService');
@@ -16,6 +16,11 @@ export class PaymentsService {
     constructor(
         @Inject(NATS_SERVICE) private readonly client: ClientProxy
     ){}
+
+    async onModuleInit() {
+        await this.client.connect();
+        this.logger.log('NATS client connected');
+    }
 
 
     async createPaymentSession(paymentSessionDto : PaymentSessionDto){
@@ -77,22 +82,28 @@ export class PaymentsService {
             return;
         }
 
-        console.log({event})
         switch(event.type){
             case 'charge.succeeded':
             const chargeSucceded = event.data.object;
+            
+            // Obtener el payment intent para acceder al metadata
+            const paymentIntent = await this.stripe.paymentIntents.retrieve(
+                chargeSucceded.payment_intent as string
+            );
+            
             const payload = {
                 stripePaymentId: chargeSucceded.id,
-                orderId: chargeSucceded.metadata.orderId,
+                orderId: paymentIntent.metadata.orderId,
                 receiptUrl: chargeSucceded.receipt_url,
             }
            
-            // this.logger.log({payload})
+            this.logger.log(`Payment succeeded for order ${payload.orderId}`);
+            
             this.client.emit('payment.succeeded', payload);
             break;
 
         default:
-            console.log(`Unhandled event type ${event.type}`);
+            this.logger.log(`Unhandled event type ${event.type}`);
         }
 
         
