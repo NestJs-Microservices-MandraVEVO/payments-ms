@@ -1,0 +1,53 @@
+#instrucciones para crear la aplicacion como una imagen
+#dependencias 
+FROM node:22-alpine as deps
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+
+RUN yarn install
+
+
+
+
+# Builder - construye la aplicacion
+FROM node:22-alpine as build
+
+WORKDIR /usr/src/app
+
+#Copiar las dependencias instaladas desde la etapa anterior
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+
+#Copiar el codigo fuente de la aplicacion
+COPY . .
+
+# RUN yarn test
+RUN yarn build
+
+RUN yarn install --production --frozen-lockfile && yarn cache clean
+
+
+
+# Crear imagen final de docker
+FROM node:22-alpine as prod
+
+WORKDIR /usr/src/app
+
+COPY --from=build /usr/src/app/node_modules ./node_modules
+
+#Copiar carpeta dist
+COPY --from=build /usr/src/app/dist ./dist
+
+ENV NODE_ENV=production
+
+USER node
+
+EXPOSE 3000
+
+
+
+CMD [ "node", "dist/main.js" ]
+#usamos el siguiente comando para hacer la prueba de la imagen creada, ya que si esta en imagenes pero no como contenedor habilitado
+# docker run -d -p 3000:3000 -e PORT=3000 -e NATS_SERVERS=nats://nats:4222 --name client-gateway-prod2 client-gateway   
