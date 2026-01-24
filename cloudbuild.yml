@@ -1,0 +1,32 @@
+#se uso de forma intercalada porque no encontraba como hacer buildx en cloud build con el archvio cloudbuild.yml
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-f",
+        "Dockerfile.prod",
+        "--platform=linux/amd64",
+        "-t",
+        "northamerica-south1-docker.pkg.dev/tienda-ms-485104/image-registry/payments-ms:$COMMIT_SHA",
+        "-t",
+        "northamerica-south1-docker.pkg.dev/tienda-ms-485104/image-registry/payments-ms:latest",
+        ".",
+      ]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "northamerica-south1-docker.pkg.dev/tienda-ms-485104/image-registry/payments-ms:$COMMIT_SHA",
+      ]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "northamerica-south1-docker.pkg.dev/tienda-ms-485104/image-registry/payments-ms:latest",
+      ]
+
+options:
+  logging: CLOUD_LOGGING_ONLY
