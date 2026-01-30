@@ -34,6 +34,7 @@ async function bootstrap() {
   
   await app.startAllMicroservices();
   await app.listen(envs.port ?? 3006);
+  console.log('hola papu, health-check funcionando');
   logger.log(`Payments Microservice is running on port ${envs.port}`);
 }
 bootstrap();
